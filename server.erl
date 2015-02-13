@@ -1,6 +1,5 @@
 -module(server).
 -export([start/0]).
--export([prn/1]).
 
 start() -> spawn(fun init/0).
 
@@ -8,35 +7,23 @@ init() -> loop([]).
 
 loop(Clients) ->
   receive
-    {new_con, {Username, Pid}} ->
-      io:format("*** NEW CONNECTION ***~n"),
+    {connect, {Username, Pid}} ->
       loop([{Username, Pid} | Clients]);
-    {send, {Rec, Msg}} ->
-      io:format("*** SENDING MSG ***~n"),
-      send(Msg, findReceiver(Rec, Clients)),
+    {send, {From, Rec, Msg}} ->
+      send(From, Msg, findReceiver(Rec, Clients)),
       loop(Clients);
-    {prn} ->
-      prn(Clients);
     _ ->
-      io:format("*** UNKNOWN CMD ***~n"),
+      io:format("Server: Unknown cmd~n"),
       loop(Clients)
   end.
 
-prn([{Username, Pid} | T]) ->
-  io:format("- " ++ Username ++ "@" ++ Pid ++ "~n"),
-  prn(T);
-prn([]) ->
-  ok.
-
-
-send(Msg, [{Rec, Pid}]) ->
-  io:format("Sending to " ++ Rec ++ "@" ++ Pid ++ "~n"),
-  io:format(Msg ++ "~n");
-send(_, []) ->
-  io:format("Couldn't find the receiver").
+send(From, Msg, [{Username, Pid}]) ->
+  Pid ! {new_msg, Msg},
+  From ! {ack, Username};
+send(From, _, []) ->
+  From ! {err, "Couldn't find the receiver"}.
 
 findReceiver(Rec, Clients) ->
   lists:filter(fun(C) -> getUsername(C) == Rec end, Clients).
 
-getUsername({Username, _}) ->
-  Username.
+getUsername({Username, _}) -> Username.
