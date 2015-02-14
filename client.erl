@@ -5,23 +5,23 @@ connect(Username, Server) ->
   spawn(fun() -> start(Username, Server) end).
 
 start(Username, Server) ->
-  Server ! {connect, {Username, self()}},
+  Server ! {self(), connect, Username},
   loop(Server).
 
 loop(Server) ->
   receive
-    {send, {Rec, Msg}} ->
-      Server ! {send, {self(), Rec, Msg}},
+    {send, Msg} ->
+      Server ! {self(), send, Msg},
       loop(Server);
-    {new_msg, Msg} ->
-      io:format("~p: New msg: ~s~n", [self(), Msg]),
+    {new_msg, From, Msg} ->
+      io:format("~p: ~s: ~s~n", [self(), From, Msg]),
       loop(Server);
-    {ack, Rec} ->
-      io:format("~p: Msg to ~s is delivered~n", [self(), Rec]),
+    {info, Msg} ->
+      io:format("~p: ~s~n", [self(), Msg]),
       loop(Server);
-    {err, Msg} ->
-      io:format("~p: Error - ~s~n", [self(), Msg]),
-      loop(Server);
+    {disconnect} ->
+        io:format("~p: Disconnected~n", [self()]),
+        exit(normal);
     _ ->
       io:format("~p: Error - Unknown command~n", [self()]),
       loop(Server)

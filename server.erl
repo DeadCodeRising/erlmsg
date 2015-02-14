@@ -6,24 +6,33 @@ start() -> spawn(fun init/0).
 init() -> loop([]).
 
 loop(Clients) ->
+  process_flag(trap_exit, true),
   receive
-    {connect, {Username, Pid}} ->
-      loop([{Username, Pid} | Clients]);
-    {send, {From, Rec, Msg}} ->
-      send(From, Msg, findReceiver(Rec, Clients)),
+    {From, connect, Username} ->
+      link(From),
+      broadcast(join, Clients, {Username}),
+      loop([{Username, From} | Clients]);
+    {From, send, Msg} ->
+      broadcast(new_msg, Clients, {find(From, Clients), Msg}),
+      loop(Clients);
+    {'EXIT', From, _} ->
+      broadcast(disconnect, Clients, {find(From, Clients)}),
       loop(Clients);
     _ ->
-      io:format("Server: Unknown cmd~n"),
       loop(Clients)
   end.
 
-send(From, Msg, [{Username, Pid}]) ->
-  Pid ! {new_msg, Msg},
-  From ! {ack, Username};
-send(From, _, []) ->
-  From ! {err, "Couldn't find the receiver"}.
+broadcast(join, Clients, {Username}) ->
+  broadcast({info, Username ++ " joined the chat."}, Clients);
+broadcast(new_msg, Clients, {Username, Msg}) ->
+  broadcast({new_msg, Username, Msg}, Clients);
+broadcast(disconnect, Clients, {Username}) ->
+  broadcast({info, Username ++ " left the chat."}, Clients).
 
-findReceiver(Rec, Clients) ->
-  lists:filter(fun(C) -> getUsername(C) == Rec end, Clients).
+broadcast(Msg, Clients) ->
+  lists:foreach(fun({_, Pid}) -> Pid ! Msg end, Clients).
 
-getUsername({Username, _}) -> Username.
+find(From, [{Username, Pid} | _]) when From == Pid ->
+  Username;
+find(From, [_ | T]) ->
+  find(From, T).
