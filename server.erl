@@ -17,7 +17,7 @@ loop(Clients) ->
       loop(Clients);
     {'EXIT', From, _} ->
       broadcast(disconnect, Clients, {find(From, Clients)}),
-      loop(Clients);
+      loop(remove(From, Clients));
     _ ->
       loop(Clients)
   end.
@@ -36,3 +36,6 @@ find(From, [{Username, Pid} | _]) when From == Pid ->
   Username;
 find(From, [_ | T]) ->
   find(From, T).
+
+remove(From, Clients) ->
+  lists:filter(fun({_, Pid}) -> Pid =/= From end, Clients).

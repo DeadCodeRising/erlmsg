@@ -6,23 +6,23 @@ connect(Username, Server) ->
 
 start(Username, Server) ->
   Server ! {self(), connect, Username},
-  loop(Server).
+  loop(Server, Username).
 
-loop(Server) ->
+loop(Server, User) ->
   receive
     {send, Msg} ->
       Server ! {self(), send, Msg},
-      loop(Server);
+      loop(Server, User);
     {new_msg, From, Msg} ->
-      io:format("~p: ~s: ~s~n", [self(), From, Msg]),
-      loop(Server);
+      io:format("[~s's client] - ~s: ~s~n", [User, From, Msg]),
+      loop(Server, User);
     {info, Msg} ->
-      io:format("~p: ~s~n", [self(), Msg]),
-      loop(Server);
-    {disconnect} ->
-        io:format("~p: Disconnected~n", [self()]),
+      io:format("[~s's client] - ~s~n", [User, Msg]),
+      loop(Server, User);
+    disconnect ->
+        io:format("[~s's client] - Disconnected~n", [User]),
         exit(normal);
     _ ->
-      io:format("~p: Error - Unknown command~n", [self()]),
-      loop(Server)
+      io:format("[~s's client] - Error - Unknown command~n", [User]),
+      loop(Server, User)
   end.
