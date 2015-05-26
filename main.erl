@@ -1,6 +1,5 @@
 #!/usr/bin/env escript
-%% -*- erlang -*-
-%%! -smp enable -sname factorial -mnesia debug verbose
+
 main([]) ->
   S = server:start(),
   C1 = client:connect("Sam",S),
